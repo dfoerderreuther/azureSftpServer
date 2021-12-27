@@ -1,6 +1,6 @@
 # AzureSFTPServer
 
-Ansible scripts for creating an Azure webserver with sftp access to web directory
+Ansible scripts for creating an Azure webserver with sftp access to web directory. Development only!
 
 Purpose of this scripts is for easy setup of an SFTP server for self hosting of Adobe Launch configurations.
 
