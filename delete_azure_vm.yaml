@@ -1,0 +1,15 @@
+---
+- name: Delete Azure VM
+  hosts: localhost
+  connection: local
+  collections:
+    - azure.azcollection
+  tasks: 
+  - name: Delete resource group
+    debug:
+      msg: "Resource Groups name is {{groupname}}"
+  - name: Delete a resource group
+    azure_rm_resourcegroup:
+      name: "{{groupname}}"
+      force_delete_nonempty: yes
+      state: absent

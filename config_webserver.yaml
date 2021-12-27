@@ -1,0 +1,65 @@
+---
+- hosts: _webserver
+  gather_facts: false
+
+  become: yes
+  tasks:
+  - name: Install packages
+    apt:
+      name:
+      - nginx
+  - name: Creating a file with content
+    copy:
+      dest: "/var/www/html/index.html"
+      content: |
+        <html>
+        <head><title>Success</title></head>
+        <body>Success</body>
+        </html>
+  # Add launch user with sftp
+  - name: Ensure group "webadmin" exists
+    ansible.builtin.group:
+      name: webadmin
+      state: present
+  - name: Add the user 'launch'
+    ansible.builtin.user:
+      name: launch
+      group: webadmin
+  - name: Create /home/launch/.ssh directory if it does not exist
+    ansible.builtin.file:
+      path: /home/launch/.ssh
+      state: directory
+  - name: Add public key
+    ansible.builtin.copy:
+      src: ./gen/launch_sftp.pub
+      dest: /home/launch/.ssh/authorized_keys
+      owner: launch
+      group: webadmin
+  - name: Change file settings for /var/www/html
+    ansible.builtin.file:
+      path: /var/www/html
+      group: webadmin
+      mode: g+rw
+      recurse: yes
+      state: directory
+
+  - name: Replace a ssh settings
+    ansible.builtin.lineinfile:
+      path: /etc/ssh/sshd_config
+      regexp: '^Subsystem.*sftp.*/usr/lib/openssh/sftp-server'
+      line: '#Subsystem       sftp    /usr/lib/openssh/sftp-server'
+  - name: Insert/Update "Match User" configuration block in /etc/ssh/sshd_config
+    ansible.builtin.blockinfile:
+      path: /etc/ssh/sshd_config
+      block: |
+        Subsystem sftp internal-sftp
+        Match User launch
+          ChrootDirectory /var/www/
+          ForceCommand internal-sftp
+          X11Forwarding no
+          AllowTcpForwarding no
+          PasswordAuthentication yes
+  - name: Restart service sshd, in all cases
+    ansible.builtin.service:
+      name: sshd
+      state: restarted

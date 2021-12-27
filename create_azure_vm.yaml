@@ -1,0 +1,79 @@
+---
+- name: Create Azure VM
+  hosts: localhost
+  connection: local
+  tasks: 
+  - name: Create Azure VM
+    debug:
+      msg: "Resource Groups name is {{groupname}}"
+  - name: Create a resource group
+    azure.azcollection.azure_rm_resourcegroup:
+      name: "{{groupname}}"
+      location: eastus
+      tags:
+          testing: testing
+  - name: Create a virtual network
+    azure_rm_virtualnetwork:
+      resource_group: "{{groupname}}"
+      name: myVirtualNetwork
+      address_prefixes_cidr:
+          - "10.1.0.0/16"
+          - "172.100.0.0/16"
+  - name: Create a subnet
+    azure_rm_subnet:
+      resource_group: "{{groupname}}"
+      virtual_network_name: myVirtualNetwork
+      name: mySubnet
+      address_prefix_cidr: "10.1.0.0/24"
+  - name: Create public IP address
+    azure_rm_publicipaddress:
+      resource_group: "{{groupname}}"
+      allocation_method: Static
+      name: myPublicIP
+    register: output_ip_address
+  - name: Public IP of VM
+    debug:
+      msg: "The public IP is {{ output_ip_address.state.ip_address }}"
+  - azure_rm_securitygroup:
+      resource_group: "{{groupname}}"
+      name: mySecGroup
+      rules:
+          - name: AllowSSH
+            protocol: Tcp
+            destination_port_range: 22
+            access: Allow
+            priority: 100
+            direction: Inbound
+          - name: AllowHttp
+            protocol: Tcp
+            destination_port_range:
+              - 80
+              - 443
+            access: Allow
+            priority: 102
+  - name: Create virtual network interface card
+    azure_rm_networkinterface:
+      resource_group: "{{groupname}}"
+      name: myNIC
+      virtual_network: myVirtualNetwork
+      subnet: mySubnet
+      public_ip_name: myPublicIP
+      security_group: mySecGroup
+  - name: Create a VM
+    azure_rm_virtualmachine:
+      resource_group: "{{groupname}}"
+      name: webserver
+      vm_size: Standard_B1ls
+      admin_username: df
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/df/.ssh/authorized_keys
+          key_data: "{{sshkey}}"
+      network_interfaces: myNIC
+      tags: 
+        applicationRole: 'webserver'
+      image:
+        offer: UbuntuServer
+        publisher: Canonical
+        sku: '18.04-LTS'
+        version: latest
