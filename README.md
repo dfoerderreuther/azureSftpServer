@@ -21,3 +21,7 @@ https://experienceleague.adobe.com/docs/experience-platform/tags/publish/self-ho
 
 sftp -i gen/launch_sftp launch@IP
 
+## Requirements: 
+
+- ansible
+- azcollection https://docs.microsoft.com/en-us/azure/developer/ansible/
